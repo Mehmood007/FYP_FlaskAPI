@@ -5,6 +5,7 @@ import uuid
 import players_data
 import league_constraints
 import players_availability
+import finance_calculator
 
 #Connection with Database
 try:
@@ -108,10 +109,15 @@ def select_player(data,session):
 
     if not league_constraints.validate_local_foriegner_squad(franchise["team"],player):
         return {'message':"Player of this type can not be picked"}
+    
+    if not finance_calculator.check_validity(franchise['budget'],player['price']):
+        return {'message':"Player is out of budget"}
 
-    franchise["draft"].remove(player)
+    
+    franchise['budget'] -= player['price']
+    franchise["draft"].remove(next(fplayer for fplayer in franchise['draft'] if fplayer["playerid"] == player['playerid']))
     franchise["team"].append(player)
-    db.franchises.find_one_and_update({"franchise_id":franchise["franchise_id"]},{'$set':{"draft":franchise["draft"],"team":franchise["team"]}})
+    db.franchises.find_one_and_update({"franchise_id":franchise["franchise_id"]},{'$set':{"draft":franchise["draft"],"team":franchise["team"],"budget":franchise['budget']}})
 
     return {"message": "Player added to team"}
 
@@ -121,9 +127,11 @@ def drop_player(data,session):
     player = data['selected_player']
     franchise = franchise_credentials(session)
 
+    franchise['budget'] += player['price']
+
     franchise["draft"].append(player)
     franchise["team"].remove(player)
-    db.franchises.find_one_and_update({"franchise_id":franchise["franchise_id"]},{'$set':{"draft":franchise["draft"],"team":franchise["team"]}})
+    db.franchises.find_one_and_update({"franchise_id":franchise["franchise_id"]},{'$set':{"draft":franchise["draft"],"team":franchise["team"],'budget':franchise['budget']}})
 
     return {"message": "Player dropped from Squad"}
 
@@ -166,7 +174,6 @@ def change_availability(data,session):
     player['availability'] = data['availability']
     franchise = franchise_credentials(session)
     
-    print(franchise['draft'])
     franchise["draft"].remove(next(fplayer for fplayer in franchise['draft'] if fplayer["playerid"] == player['playerid']))
     franchise["draft"].append(player)
     db.franchises.find_one_and_update({"franchise_id":franchise["franchise_id"]},{'$set':{"draft":franchise["draft"]}})
@@ -185,6 +192,23 @@ def reject_player(data,session):
 
     return {"message": "Player deleted from draft"}
 
+
+def select_retention(data,session):
+    players = data['selected_players']
+    franchise = franchise_credentials(session)
+    not_in_list_players = []
+    for player in franchise['team']:
+        if player not in players:
+            not_in_list_players.append(player)
+
+    for player in not_in_list_players:
+        franchise['budget'] += player['price']
+
+        franchise["draft"].append(player)
+        franchise["team"].remove(player)
+    db.franchises.find_one_and_update({"franchise_id":franchise["franchise_id"]},{'$set':{"draft":franchise["draft"],"team":franchise["team"],'budget':franchise['budget']}})
+
+    return {"message": "Player retained"}
 
 
 

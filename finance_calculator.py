@@ -29,5 +29,12 @@ def performance_to_budget_ratio(player):
     return batting_budget_ratio,bowling_budget_ratio
 
 
+
+def check_validity(current_budget,player_price):
+    if player_price<current_budget:
+        return True
+    return False
+
+
 def player_score(avg,sr):
     return avg*sr

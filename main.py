@@ -6,6 +6,7 @@ import user_management
 import draft
 import dls_calculator
 import playing_xi
+import player_retention
 from flask_cors import CORS
 
 
@@ -289,6 +290,37 @@ def drop_playing_xi_player():
     return jsonify({"message":"No such draft exists"})
 
 
+@app.route("/suggest_retention", methods = ['POST'])
+def suggest_retention():
+    
+        session = request.headers['session_id']
+        data = request.get_json()
+        if user_management.verify_franchise_session(session):
+            draft_players = player_retention.retention_suggestion(data)
+            if draft_players:
+                return jsonify(draft_players)
+        else:
+            return jsonify({"message":"User not authorized for this request"})
+    
+        return jsonify({"message":"User not authorized for this request"})
+    
+  
+
+@app.route("/select_retention", methods = ['POST'])
+def select_retention():
+    
+        session = request.headers['session_id']
+        data = request.get_json()
+        if user_management.verify_franchise_session(session):
+            draft_players = user_management.select_retention(data,session)
+            if draft_players:
+                return jsonify(draft_players)
+        else:
+            return jsonify({"message":"User not authorized for this request"})
+    
+        return jsonify({"message":"User not authorized for this request"})
+    
+  
 
 @app.route("/dl_calculator", methods = ['POST'])
 def dl_calulator():
